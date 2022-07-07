@@ -1,3 +1,3 @@
 package utils
 
-var TestPrefix = "CLIENT_TEST_"
+var TestPrefix = "TEST_"
