@@ -51,6 +51,26 @@ func newRegisterUserRequest(username string, email string, password string) regi
 	}
 }
 
+type loginRequest struct {
+	User loginRequestUser `json:"user"`
+}
+
+type loginRequestUser struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginResponse = user
+
+func newLoginRequest(email string, password string) loginRequest {
+	return loginRequest{
+		User: loginRequestUser{
+			Email:    email,
+			Password: password,
+		},
+	}
+}
+
 func (c *UsersClient) RegisterUser(username string, email string, password string) (*RegisterUserResponse, error) {
 	url := fmt.Sprintf("%s/users", c.BaseURL)
 
@@ -82,6 +102,37 @@ func (c *UsersClient) RegisterUser(username string, email string, password strin
 			return nil, err
 		}
 		return nil, fmt.Errorf("%s", errorResponse.Errors.Body[0])
+	default:
+		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
+	}
+}
+
+func (c *UsersClient) Login(email string, password string) (*RegisterUserResponse, error) {
+	url := fmt.Sprintf("%s/users/login", c.BaseURL)
+
+	requestData := newLoginRequest(email, password)
+
+	requestBody, err := json.Marshal(requestData)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := http.Post(url, "application/json", bytes.NewBuffer(requestBody))
+
+	if err != nil {
+		return nil, err
+	}
+
+	switch response.StatusCode {
+	case http.StatusOK:
+		responseData := &RegisterUserResponse{}
+		err = json.NewDecoder(response.Body).Decode(&responseData)
+		if err != nil {
+			return nil, err
+		}
+		return responseData, nil
+	case http.StatusUnauthorized:
+		return nil, fmt.Errorf("Unauthorized")
 	default:
 		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
 	}
