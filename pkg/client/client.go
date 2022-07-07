@@ -8,18 +8,18 @@ type client struct {
 	Users users.UsersClient
 }
 
-func NewClient() client {
+func NewClient(email string, password string) client {
 	baseURL := "https://realworld-example-app-api-api-gateway-4os2xo04.uc.gateway.dev/api"
 
-	usersClient := users.NewUsersClient(baseURL)
+	usersClient := users.NewUsersClient(baseURL, email, password)
 
 	return client{
 		Users: usersClient,
 	}
 }
 
-func NewClientWithBaseUrl(baseURL string) client {
-	usersClient := users.NewUsersClient(baseURL)
+func NewClientWithBaseUrl(baseURL string, email string, password string) client {
+	usersClient := users.NewUsersClient(baseURL, email, password)
 
 	return client{
 		Users: usersClient,

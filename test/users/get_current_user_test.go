@@ -9,7 +9,7 @@ import (
 	"github.com/marcusmonteirodesouza/go-microservices-realworld-example-app-client/test/utils"
 )
 
-func TestGivenValidRequestWhenLoginShouldReturnLoginResponse(t *testing.T) {
+func TestGivenValidRequestWhenGetCurrentUserShouldReturnGetCurrentUserResponse(t *testing.T) {
 	username := fmt.Sprintf("%s%s", utils.TestPrefix, faker.Username())
 	email := fmt.Sprintf("%s%s", utils.TestPrefix, faker.Email())
 	password := faker.Password()
@@ -21,13 +21,13 @@ func TestGivenValidRequestWhenLoginShouldReturnLoginResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	loggedUser, err := client.Users.Login()
+	currentUser, err := client.Users.GetCurrentUser()
 
-	if loggedUser.User.Username != username {
+	if currentUser.User.Username != username {
 		t.Fatalf("got %s, want %s", user.User.Username, username)
 	}
 
-	if loggedUser.User.Email != email {
+	if currentUser.User.Email != email {
 		t.Fatalf("got %s, want %s", user.User.Email, email)
 	}
 }

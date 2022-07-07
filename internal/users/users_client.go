@@ -10,12 +10,17 @@ import (
 )
 
 type UsersClient struct {
-	BaseURL string
+	baseURL  string
+	email    string
+	password string
+	token    *string
 }
 
-func NewUsersClient(baseURL string) UsersClient {
+func NewUsersClient(baseURL string, email string, password string) UsersClient {
 	return UsersClient{
-		BaseURL: baseURL,
+		baseURL:  baseURL,
+		email:    email,
+		password: password,
 	}
 }
 
@@ -62,6 +67,8 @@ type loginRequestUser struct {
 
 type LoginResponse = user
 
+type GetCurrentUserResponse = user
+
 func newLoginRequest(email string, password string) loginRequest {
 	return loginRequest{
 		User: loginRequestUser{
@@ -71,10 +78,10 @@ func newLoginRequest(email string, password string) loginRequest {
 	}
 }
 
-func (c *UsersClient) RegisterUser(username string, email string, password string) (*RegisterUserResponse, error) {
-	url := fmt.Sprintf("%s/users", c.BaseURL)
+func (c *UsersClient) RegisterUser(username string) (*RegisterUserResponse, error) {
+	url := fmt.Sprintf("%s/users", c.baseURL)
 
-	requestData := newRegisterUserRequest(username, email, password)
+	requestData := newRegisterUserRequest(username, c.email, c.password)
 
 	requestBody, err := json.Marshal(requestData)
 	if err != nil {
@@ -86,6 +93,8 @@ func (c *UsersClient) RegisterUser(username string, email string, password strin
 	if err != nil {
 		return nil, err
 	}
+
+	defer response.Body.Close()
 
 	switch response.StatusCode {
 	case http.StatusCreated:
@@ -107,10 +116,10 @@ func (c *UsersClient) RegisterUser(username string, email string, password strin
 	}
 }
 
-func (c *UsersClient) Login(email string, password string) (*RegisterUserResponse, error) {
-	url := fmt.Sprintf("%s/users/login", c.BaseURL)
+func (c *UsersClient) Login() (*RegisterUserResponse, error) {
+	url := fmt.Sprintf("%s/users/login", c.baseURL)
 
-	requestData := newLoginRequest(email, password)
+	requestData := newLoginRequest(c.email, c.password)
 
 	requestBody, err := json.Marshal(requestData)
 	if err != nil {
@@ -122,6 +131,8 @@ func (c *UsersClient) Login(email string, password string) (*RegisterUserRespons
 	if err != nil {
 		return nil, err
 	}
+
+	defer response.Body.Close()
 
 	switch response.StatusCode {
 	case http.StatusOK:
@@ -136,4 +147,56 @@ func (c *UsersClient) Login(email string, password string) (*RegisterUserRespons
 	default:
 		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
 	}
+}
+
+func (c *UsersClient) GetCurrentUser() (*GetCurrentUserResponse, error) {
+	url := fmt.Sprintf("%s/user", c.baseURL)
+	client := &http.Client{}
+
+	token, err := c.GetToken()
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", *token))
+
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	switch response.StatusCode {
+	case http.StatusOK:
+		responseData := &GetCurrentUserResponse{}
+		err = json.NewDecoder(response.Body).Decode(&responseData)
+		if err != nil {
+			return nil, err
+		}
+		return responseData, nil
+	case http.StatusUnauthorized:
+		return nil, fmt.Errorf("Unauthorized")
+	default:
+		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
+	}
+}
+
+func (c *UsersClient) GetToken() (*string, error) {
+	if c.token != nil {
+		return c.token, nil
+	}
+
+	loggedUser, err := c.Login()
+	if err != nil {
+		return nil, err
+	}
+
+	c.token = &loggedUser.User.Token
+	return c.token, nil
 }
