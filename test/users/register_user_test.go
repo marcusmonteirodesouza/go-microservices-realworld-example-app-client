@@ -29,3 +29,17 @@ func TestGivenValidRequestWhenRegisterUserShouldReturnUser(t *testing.T) {
 		t.Fatalf("got %s, want %s", user.User.Email, email)
 	}
 }
+
+func TestGivenUnprocessableEntityStatusCodeWhenRegisterUserShouldReturnError(t *testing.T) {
+	username := fmt.Sprintf("%s%s", utils.TestPrefix, faker.Username())
+	email := "invalid"
+	password := faker.Password()
+
+	client := client.NewClient()
+
+	_, err := client.Users.RegisterUser(username, email, password)
+
+	if err == nil {
+		t.Fatal("Should have returned an error")
+	}
+}
