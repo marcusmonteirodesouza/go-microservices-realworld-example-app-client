@@ -3,6 +3,7 @@ package users
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -10,21 +11,24 @@ import (
 )
 
 type UsersClient struct {
-	baseURL  string
-	email    string
-	password string
-	token    *string
+	baseURL string
+	token   *string
 }
 
-func NewUsersClient(baseURL string, email string, password string) UsersClient {
+func NewUsersClient(baseURL string) UsersClient {
 	return UsersClient{
-		baseURL:  baseURL,
-		email:    email,
-		password: password,
+		baseURL: baseURL,
 	}
 }
 
-type user struct {
+func NewUsersClientWithToken(baseURL string, token string) UsersClient {
+	return UsersClient{
+		baseURL: baseURL,
+		token:   &token,
+	}
+}
+
+type User struct {
 	User struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
@@ -43,8 +47,6 @@ type registerUserRequestUser struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
-
-type RegisterUserResponse = user
 
 func newRegisterUserRequest(username string, email string, password string) registerUserRequest {
 	return registerUserRequest{
@@ -65,10 +67,6 @@ type loginRequestUser struct {
 	Password string `json:"password"`
 }
 
-type LoginResponse = user
-
-type GetCurrentUserResponse = user
-
 func newLoginRequest(email string, password string) loginRequest {
 	return loginRequest{
 		User: loginRequestUser{
@@ -78,10 +76,22 @@ func newLoginRequest(email string, password string) loginRequest {
 	}
 }
 
-func (c *UsersClient) RegisterUser(username string) (*RegisterUserResponse, error) {
+type updateUserRequest struct {
+	User UpdateUserRequestUser `json:"user"`
+}
+
+type UpdateUserRequestUser struct {
+	Username *string `json:"username"`
+	Email    *string `json:"email"`
+	Password *string `json:"password"`
+	Bio      *string `json:"bio"`
+	Image    *string `json:"image"`
+}
+
+func (c *UsersClient) RegisterUser(username string, email string, password string) (*User, error) {
 	url := fmt.Sprintf("%s/users", c.baseURL)
 
-	requestData := newRegisterUserRequest(username, c.email, c.password)
+	requestData := newRegisterUserRequest(username, email, password)
 
 	requestBody, err := json.Marshal(requestData)
 	if err != nil {
@@ -98,12 +108,13 @@ func (c *UsersClient) RegisterUser(username string) (*RegisterUserResponse, erro
 
 	switch response.StatusCode {
 	case http.StatusCreated:
-		responseData := &RegisterUserResponse{}
+		responseData := User{}
 		err = json.NewDecoder(response.Body).Decode(&responseData)
 		if err != nil {
 			return nil, err
 		}
-		return responseData, nil
+		c.token = &responseData.User.Token
+		return &responseData, nil
 	case http.StatusUnprocessableEntity:
 		errorResponse := &common.ErrorResponse{}
 		err = json.NewDecoder(response.Body).Decode(&errorResponse)
@@ -116,10 +127,10 @@ func (c *UsersClient) RegisterUser(username string) (*RegisterUserResponse, erro
 	}
 }
 
-func (c *UsersClient) Login() (*RegisterUserResponse, error) {
+func (c *UsersClient) Login(email string, password string) (*User, error) {
 	url := fmt.Sprintf("%s/users/login", c.baseURL)
 
-	requestData := newLoginRequest(c.email, c.password)
+	requestData := newLoginRequest(email, password)
 
 	requestBody, err := json.Marshal(requestData)
 	if err != nil {
@@ -136,12 +147,13 @@ func (c *UsersClient) Login() (*RegisterUserResponse, error) {
 
 	switch response.StatusCode {
 	case http.StatusOK:
-		responseData := &RegisterUserResponse{}
+		responseData := User{}
 		err = json.NewDecoder(response.Body).Decode(&responseData)
 		if err != nil {
 			return nil, err
 		}
-		return responseData, nil
+		c.token = &responseData.User.Token
+		return &responseData, nil
 	case http.StatusUnauthorized:
 		return nil, fmt.Errorf("Unauthorized")
 	default:
@@ -149,21 +161,61 @@ func (c *UsersClient) Login() (*RegisterUserResponse, error) {
 	}
 }
 
-func (c *UsersClient) GetCurrentUser() (*GetCurrentUserResponse, error) {
-	url := fmt.Sprintf("%s/user", c.baseURL)
-	client := &http.Client{}
-
-	token, err := c.GetToken()
-	if err != nil {
-		return nil, err
+func (c *UsersClient) GetCurrentUser() (*User, error) {
+	if c.token == nil {
+		return nil, errors.New("Please Login first")
 	}
+
+	url := fmt.Sprintf("%s/user", c.baseURL)
+	httpClient := &http.Client{}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", *token))
+	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", *c.token))
+
+	response, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	switch response.StatusCode {
+	case http.StatusOK:
+		responseData := User{}
+		err = json.NewDecoder(response.Body).Decode(&responseData)
+		if err != nil {
+			return nil, err
+		}
+		return &responseData, nil
+	case http.StatusUnauthorized:
+		return nil, fmt.Errorf("Unauthorized")
+	default:
+		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
+	}
+}
+
+func (c *UsersClient) UpdateUser(request UpdateUserRequestUser) (*User, error) {
+	if c.token == nil {
+		return nil, errors.New("Please Login first")
+	}
+
+	url := fmt.Sprintf("%s/user", c.baseURL)
+	client := &http.Client{}
+
+	requestBody := updateUserRequest{
+		User: request,
+	}
+	requestBytes, err := json.Marshal(requestBody)
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(requestBytes))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", *c.token))
 
 	response, err := client.Do(req)
 	if err != nil {
@@ -174,29 +226,23 @@ func (c *UsersClient) GetCurrentUser() (*GetCurrentUserResponse, error) {
 
 	switch response.StatusCode {
 	case http.StatusOK:
-		responseData := &GetCurrentUserResponse{}
+		responseData := &User{}
 		err = json.NewDecoder(response.Body).Decode(&responseData)
 		if err != nil {
 			return nil, err
 		}
+		c.token = &responseData.User.Token
 		return responseData, nil
 	case http.StatusUnauthorized:
 		return nil, fmt.Errorf("Unauthorized")
+	case http.StatusUnprocessableEntity:
+		errorResponse := &common.ErrorResponse{}
+		err = json.NewDecoder(response.Body).Decode(&errorResponse)
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%s", errorResponse.Errors.Body[0])
 	default:
 		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
 	}
-}
-
-func (c *UsersClient) GetToken() (*string, error) {
-	if c.token != nil {
-		return c.token, nil
-	}
-
-	loggedUser, err := c.Login()
-	if err != nil {
-		return nil, err
-	}
-
-	c.token = &loggedUser.User.Token
-	return c.token, nil
 }

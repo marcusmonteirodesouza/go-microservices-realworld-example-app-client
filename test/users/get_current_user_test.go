@@ -14,9 +14,9 @@ func TestGivenValidRequestWhenGetCurrentUserShouldReturnGetCurrentUserResponse(t
 	email := fmt.Sprintf("%s%s", utils.TestPrefix, faker.Email())
 	password := faker.Password()
 
-	client := client.NewClient(email, password)
+	client := client.NewClient()
 
-	user, err := client.Users.RegisterUser(username)
+	user, err := client.Users.RegisterUser(username, email, password)
 	if err != nil {
 		t.Fatal(err)
 	}
