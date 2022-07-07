@@ -21,4 +21,4 @@ This is a [Go](https://go.dev/) client for the [RealWorld API Spec](https://real
 
 ## Testing
 
-TODO
+Run `./test.sh`
