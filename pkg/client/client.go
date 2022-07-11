@@ -6,9 +6,9 @@ type Client struct {
 	Users users.UsersClient
 }
 
-func NewClient() Client {
-	baseURL := "https://realworld-example-app-api-api-gateway-4os2xo04.uc.gateway.dev/api"
+var baseURL = "https://realworld-example-app-api-api-gateway-4os2xo04.uc.gateway.dev/api"
 
+func NewClient() Client {
 	usersClient := users.NewUsersClient(baseURL)
 
 	return Client{
@@ -18,6 +18,14 @@ func NewClient() Client {
 
 func NewClientWithBaseUrl(baseURL string) Client {
 	usersClient := users.NewUsersClient(baseURL)
+
+	return Client{
+		Users: usersClient,
+	}
+}
+
+func NewClientWithToken(token string) Client {
+	usersClient := users.NewUsersClientWithToken(baseURL, token)
 
 	return Client{
 		Users: usersClient,
