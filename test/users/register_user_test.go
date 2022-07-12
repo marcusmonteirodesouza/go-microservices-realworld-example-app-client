@@ -9,7 +9,7 @@ import (
 	"github.com/marcusmonteirodesouza/go-microservices-realworld-example-app-client/test/utils"
 )
 
-func TestGivenValidRequestWhenRegisterUserShouldReturnRegisterUserResponse(t *testing.T) {
+func TestGivenValidRequestWhenRegisterUserShouldReturnUser(t *testing.T) {
 	username := fmt.Sprintf("%s%s", utils.TestPrefix, faker.Username())
 	email := fmt.Sprintf("%s%s", utils.TestPrefix, faker.Email())
 	password := faker.Password()

@@ -10,7 +10,7 @@ import (
 	"github.com/marcusmonteirodesouza/go-microservices-realworld-example-app-client/test/utils"
 )
 
-func TestGivenValidRequestWhenUpdateUserShouldReturnUpdateUserResponse(t *testing.T) {
+func TestGivenValidRequestWhenUpdateUserShouldReturnUser(t *testing.T) {
 	username := fmt.Sprintf("%s%s", utils.TestPrefix, faker.Username())
 	email := fmt.Sprintf("%s%s", utils.TestPrefix, faker.Email())
 	password := faker.Password()
@@ -34,7 +34,15 @@ func TestGivenValidRequestWhenUpdateUserShouldReturnUpdateUserResponse(t *testin
 		Image:    &imageUpdate,
 	}
 
+	err = client.Login(email, password)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	updatedUser, err := client.Users.UpdateUser(updateUserRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if updatedUser.User.Username != *updateUserRequest.Username {
 		t.Fatalf("got %s, want %s", updatedUser.User.Username, *updateUserRequest.Username)

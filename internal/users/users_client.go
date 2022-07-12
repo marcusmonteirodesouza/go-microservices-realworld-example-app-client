@@ -58,24 +58,6 @@ func newRegisterUserRequest(username string, email string, password string) regi
 	}
 }
 
-type loginRequest struct {
-	User loginRequestUser `json:"user"`
-}
-
-type loginRequestUser struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-func newLoginRequest(email string, password string) loginRequest {
-	return loginRequest{
-		User: loginRequestUser{
-			Email:    email,
-			Password: password,
-		},
-	}
-}
-
 type updateUserRequest struct {
 	User UpdateUserRequestUser `json:"user"`
 }
@@ -113,7 +95,6 @@ func (c *UsersClient) RegisterUser(username string, email string, password strin
 		if err != nil {
 			return nil, err
 		}
-		c.token = &responseData.User.Token
 		return &responseData, nil
 	case http.StatusUnprocessableEntity:
 		errorResponse := &common.ErrorResponse{}
@@ -122,40 +103,6 @@ func (c *UsersClient) RegisterUser(username string, email string, password strin
 			return nil, err
 		}
 		return nil, fmt.Errorf("%s", errorResponse.Errors.Body[0])
-	default:
-		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
-	}
-}
-
-func (c *UsersClient) Login(email string, password string) (*User, error) {
-	url := fmt.Sprintf("%s/users/login", c.baseURL)
-
-	requestData := newLoginRequest(email, password)
-
-	requestBody, err := json.Marshal(requestData)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := http.Post(url, "application/json", bytes.NewBuffer(requestBody))
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer response.Body.Close()
-
-	switch response.StatusCode {
-	case http.StatusOK:
-		responseData := User{}
-		err = json.NewDecoder(response.Body).Decode(&responseData)
-		if err != nil {
-			return nil, err
-		}
-		c.token = &responseData.User.Token
-		return &responseData, nil
-	case http.StatusUnauthorized:
-		return nil, fmt.Errorf("Unauthorized")
 	default:
 		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
 	}
@@ -231,7 +178,6 @@ func (c *UsersClient) UpdateUser(request UpdateUserRequestUser) (*User, error) {
 		if err != nil {
 			return nil, err
 		}
-		c.token = &responseData.User.Token
 		return responseData, nil
 	case http.StatusUnauthorized:
 		return nil, fmt.Errorf("Unauthorized")
@@ -245,4 +191,8 @@ func (c *UsersClient) UpdateUser(request UpdateUserRequestUser) (*User, error) {
 	default:
 		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
 	}
+}
+
+func (c *UsersClient) SetToken(token string) {
+	c.token = &token
 }

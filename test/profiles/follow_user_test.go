@@ -37,7 +37,10 @@ func TestGivenValidRequestWhenFollowUserShouldReturnProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	profile, err := followerClient.Profiles.FollowUser(followeeEmail)
+	profile, err := followerClient.Profiles.FollowUser(followeeUsername)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if profile.Profile.Username != followeeUsername {
 		t.Fatalf("got %s, want %s", profile.Profile.Username, followeeUsername)

@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/marcusmonteirodesouza/go-microservices-realworld-example-app-client/internal/common"
 )
 
 type ProfilesClient struct {
@@ -43,6 +41,8 @@ func (c *ProfilesClient) FollowUser(username string) (*Profile, error) {
 
 	url := fmt.Sprintf("%s/profiles/%s/follow", c.baseURL, username)
 
+	client := &http.Client{}
+
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (c *ProfilesClient) FollowUser(username string) (*Profile, error) {
 
 	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", *c.token))
 
-	response, err := http.Post(url, "application/json", nil)
+	response, err := client.Do(req)
 
 	if err != nil {
 		return nil, err
@@ -66,13 +66,6 @@ func (c *ProfilesClient) FollowUser(username string) (*Profile, error) {
 			return nil, err
 		}
 		return &responseData, nil
-	case http.StatusUnprocessableEntity:
-		errorResponse := &common.ErrorResponse{}
-		err = json.NewDecoder(response.Body).Decode(&errorResponse)
-		if err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("%s", errorResponse.Errors.Body[0])
 	default:
 		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
 	}
