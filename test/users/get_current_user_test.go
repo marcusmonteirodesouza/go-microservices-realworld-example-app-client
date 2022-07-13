@@ -1,6 +1,7 @@
 package test_users
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestGivenValidRequestWhenGetCurrentUserShouldReturnUser(t *testing.T) {
 
 	client := client.NewClient()
 
-	user, err := client.Users.RegisterUser(username, email, password)
+	user, err := client.Users.RegisterUser(context.Background(), username, email, password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +27,7 @@ func TestGivenValidRequestWhenGetCurrentUserShouldReturnUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	currentUser, err := client.Users.GetCurrentUser()
+	currentUser, err := client.Users.GetCurrentUser(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
