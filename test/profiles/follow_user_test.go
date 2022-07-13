@@ -1,6 +1,7 @@
 package test_users
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestGivenValidRequestWhenFollowUserShouldReturnProfile(t *testing.T) {
 
 	followeeClient := client.NewClient()
 
-	_, err := followeeClient.Users.RegisterUser(followeeUsername, followeeEmail, followeePassword)
+	_, err := followeeClient.Users.RegisterUser(context.Background(), followeeUsername, followeeEmail, followeePassword)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +28,7 @@ func TestGivenValidRequestWhenFollowUserShouldReturnProfile(t *testing.T) {
 
 	followerClient := client.NewClient()
 
-	_, err = followerClient.Users.RegisterUser(followerUsername, followerEmail, followerPassword)
+	_, err = followerClient.Users.RegisterUser(context.Background(), followerUsername, followerEmail, followerPassword)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +38,7 @@ func TestGivenValidRequestWhenFollowUserShouldReturnProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	profile, err := followerClient.Profiles.FollowUser(followeeUsername)
+	profile, err := followerClient.Profiles.FollowUser(context.Background(), followeeUsername)
 	if err != nil {
 		t.Fatal(err)
 	}

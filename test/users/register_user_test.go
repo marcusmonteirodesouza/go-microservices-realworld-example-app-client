@@ -1,6 +1,7 @@
 package test_users
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestGivenValidRequestWhenRegisterUserShouldReturnUser(t *testing.T) {
 
 	client := client.NewClient()
 
-	user, err := client.Users.RegisterUser(username, email, password)
+	user, err := client.Users.RegisterUser(context.Background(), username, email, password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +38,7 @@ func TestGivenUnprocessableEntityStatusCodeWhenRegisterUserShouldReturnError(t *
 
 	client := client.NewClient()
 
-	_, err := client.Users.RegisterUser(username, email, password)
+	_, err := client.Users.RegisterUser(context.Background(), username, email, password)
 
 	if err == nil {
 		t.Fatal("Should have returned an error")

@@ -2,6 +2,7 @@ package users
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -70,7 +71,7 @@ type UpdateUserRequestUser struct {
 	Image    *string `json:"image"`
 }
 
-func (c *UsersClient) RegisterUser(username string, email string, password string) (*User, error) {
+func (c *UsersClient) RegisterUser(ctx context.Context, username string, email string, password string) (*User, error) {
 	url := fmt.Sprintf("%s/users", c.baseURL)
 
 	requestData := newRegisterUserRequest(username, email, password)
@@ -80,7 +81,16 @@ func (c *UsersClient) RegisterUser(username string, email string, password strin
 		return nil, err
 	}
 
-	response, err := http.Post(url, "application/json", bytes.NewBuffer(requestBody))
+	client := &http.Client{}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("content-type", "application/json")
+
+	response, err := client.Do(req)
 
 	if err != nil {
 		return nil, err
@@ -108,7 +118,7 @@ func (c *UsersClient) RegisterUser(username string, email string, password strin
 	}
 }
 
-func (c *UsersClient) GetCurrentUser() (*User, error) {
+func (c *UsersClient) GetCurrentUser(ctx context.Context) (*User, error) {
 	if c.token == nil {
 		return nil, errors.New("Please Login first")
 	}
@@ -116,7 +126,7 @@ func (c *UsersClient) GetCurrentUser() (*User, error) {
 	url := fmt.Sprintf("%s/user", c.baseURL)
 	httpClient := &http.Client{}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +155,7 @@ func (c *UsersClient) GetCurrentUser() (*User, error) {
 	}
 }
 
-func (c *UsersClient) UpdateUser(request UpdateUserRequestUser) (*User, error) {
+func (c *UsersClient) UpdateUser(ctx context.Context, request UpdateUserRequestUser) (*User, error) {
 	if c.token == nil {
 		return nil, errors.New("Please Login first")
 	}
@@ -157,7 +167,7 @@ func (c *UsersClient) UpdateUser(request UpdateUserRequestUser) (*User, error) {
 		User: request,
 	}
 	requestBytes, err := json.Marshal(requestBody)
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(requestBytes))
+	req, err := http.NewRequestWithContext(ctx, "PUT", url, bytes.NewBuffer(requestBytes))
 	if err != nil {
 		return nil, err
 	}
