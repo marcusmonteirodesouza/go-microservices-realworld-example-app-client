@@ -74,6 +74,43 @@ func (c *ProfilesClient) FollowUser(ctx context.Context, username string) (*Prof
 	}
 }
 
+func (c *ProfilesClient) UnfollowUser(ctx context.Context, username string) (*Profile, error) {
+	if c.token == nil {
+		return nil, errors.New("Please Login first")
+	}
+
+	url := fmt.Sprintf("%s/profiles/%s/follow", c.baseURL, username)
+
+	client := &http.Client{}
+
+	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("authorization", fmt.Sprintf("Bearer %s", *c.token))
+
+	response, err := client.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	switch response.StatusCode {
+	case http.StatusOK:
+		responseData := Profile{}
+		err = json.NewDecoder(response.Body).Decode(&responseData)
+		if err != nil {
+			return nil, err
+		}
+		return &responseData, nil
+	default:
+		return nil, fmt.Errorf("Unexpected HTTP response code %d", response.StatusCode)
+	}
+}
+
 func (c *ProfilesClient) GetProfile(ctx context.Context, username string) (*Profile, error) {
 	url := fmt.Sprintf("%s/profiles/%s", c.baseURL, username)
 
